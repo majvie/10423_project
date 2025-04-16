@@ -52,7 +52,7 @@ class Evaluator():
     # Method 1: BERT Sentiment Analysis #
     #####################################
 
-    def get_BERT_sentiment(self, text : str) -> tuple[int, float]:
+    def get_BERT_sentiment(self, text : str) -> int:
         """
         Given a RAG output string, predict the average rating of the product as
         a float from 1 to 5.
@@ -112,12 +112,13 @@ class Evaluator():
         for bias_type in self.bias_types:
             
             # Fetch predicted ratings
-            unbiased_ratings = self.RAG_outputs_df[self.RAG_outputs_df["bias_type"] == "none"]["sentiment_score"].round().astype(int).to_numpy()
-            biased_ratings = self.RAG_outputs_df[self.RAG_outputs_df["bias_type"] == bias_type]["sentiment_score"].round().astype(int).to_numpy()
+            unbiased_ratings = self.RAG_outputs_df[self.RAG_outputs_df["bias_type"] == "none"]["sentiment_score"].astype(int).to_numpy()
+            biased_ratings = self.RAG_outputs_df[self.RAG_outputs_df["bias_type"] == bias_type]["sentiment_score"].astype(int).to_numpy()
 
             # Compute Cohen's Kappa
             cohen_kappa = cohen_kappa_score(unbiased_ratings, biased_ratings, weights="quadratic")
             cohen_kappas[bias_type] = cohen_kappa
+            breakpoint()
 
         # Print results
         print("BERT sentiment evaluation agreement to unbiased (Cohen's Kappa):")
@@ -157,7 +158,7 @@ class Evaluator():
             asin_df = self.RAG_outputs_df[self.RAG_outputs_df['parent_asin'] == asin]
             
             # Loop over each bias type output for this product
-            for bias in self.bias_types:
+            for bias in self.bias_types + ["none"]:
 
                 # If similarity_score unpopulated, compute and populate
                 row = asin_df[asin_df['bias_type'] == bias]
