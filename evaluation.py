@@ -14,6 +14,8 @@ from sklearn.metrics import cohen_kappa_score
 import numpy as np
 from pprint import pprint
 import pandas as pd
+from tqdm import tqdm
+from transformers import pipeline
 
 ###############################################################################
 
@@ -25,7 +27,8 @@ class Evaluator():
     def __init__(self,
                  path_to_RAG_outputs : str,
                  bias_types : list[str],
-                 similarity_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+                 similarity_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+                 bert_model_name : str = "nlptown/bert-base-multilingual-uncased-sentiment"):
         """
         Initialize evaluator.
 
@@ -41,11 +44,15 @@ class Evaluator():
         self.similarity_model = SentenceTransformer(similarity_model_name)
         self.bias_types = bias_types
 
+        # Bert model
+        self.bert_pipe = pipeline("text-classification", model=bert_model_name)
+
+
     #####################################
     # Method 1: BERT Sentiment Analysis #
     #####################################
 
-    def get_BERT_sentiment(self, text : str) -> float:
+    def get_BERT_sentiment(self, text : str) -> tuple[int, float]:
         """
         Given a RAG output string, predict the average rating of the product as
         a float from 1 to 5.
@@ -57,8 +64,9 @@ class Evaluator():
             float: Rating from 1 to 5
         """
 
-        pass
-
+        # Output label is of form f"{n} stars"
+        stars = int(self.bert_pipe(text)[0]['label'][0])
+        return stars
 
     def run_BERT_eval(self):
         """
@@ -66,7 +74,7 @@ class Evaluator():
         """
 
         # Loop over (product, bias) pairs and fill in missing BERT labels.
-        for idx, row in self.RAG_outputs_df.iterrows():
+        for idx, row in tqdm(self.RAG_outputs_df.iterrows()):
 
             if pd.isna(row['sentiment_score']):
 
@@ -76,7 +84,7 @@ class Evaluator():
                 self.RAG_outputs_df.at[idx, 'sentiment_score'] = sentiment_score
 
                 # Update CSV
-                self.RAG_outputs_df.to_csv(self.path_to_RAG_outputs, index=False)
+                # self.RAG_outputs_df.to_csv(self.path_to_RAG_outputs, index=False)
         
         # PART A: MEAN SQUARED ERROR
         mean_squared_errors = dict()
@@ -94,6 +102,7 @@ class Evaluator():
         # Print results
         print("BERT sentiment evaluation mean squared error:")
         pprint(mean_squared_errors)
+        print("\n\n")
 
         #############################################################################
 
@@ -113,6 +122,7 @@ class Evaluator():
         # Print results
         print("BERT sentiment evaluation agreement to unbiased (Cohen's Kappa):")
         pprint(cohen_kappas)
+        print("\n\n")
 
     ###############################
     # Method 2: Cosine Similarity #
@@ -143,7 +153,7 @@ class Evaluator():
         """
 
         # Loop over products
-        for asin in self.RAG_outputs_df['parent_asin'].unique():
+        for asin in tqdm(self.RAG_outputs_df['parent_asin'].unique()):
             asin_df = self.RAG_outputs_df[self.RAG_outputs_df['parent_asin'] == asin]
             
             # Loop over each bias type output for this product
@@ -151,10 +161,10 @@ class Evaluator():
 
                 # If similarity_score unpopulated, compute and populate
                 row = asin_df[asin_df['bias_type'] == bias]
-                if pd.isna(row['similarity_score']):
+                if pd.isna(row['similarity_score'].iloc[0]):
 
                     # Compute cosine similarity
-                    unbiased_text = self.RAG_outputs_df[(self.RAG_outputs_df['parent_asin'] == asin) & (self.RAG_outputs_df['bias_type'] == 'none')]['text'].iloc[0]
+                    unbiased_text = asin_df[asin_df['bias_type'] == 'none']['text'].iloc[0]
                     biased_text = row['text'].iloc[0]
                     similarity_score = self.cos_sim(unbiased_text, biased_text)
 
@@ -163,7 +173,7 @@ class Evaluator():
                     self.RAG_outputs_df.at[idx, 'similarity_score'] = similarity_score
 
                     # Update CSV
-                    self.RAG_outputs_df.to_csv(self.path_to_RAG_outputs, index=False)
+                    # self.RAG_outputs_df.to_csv(self.path_to_RAG_outputs, index=False)
 
         # Compute average cosine similarities for each type of bias
         similarity_scores = dict()
@@ -172,8 +182,7 @@ class Evaluator():
             
             # Fetch similarities for type
             filtered_df = self.RAG_outputs_df[self.RAG_outputs_df['bias_type'] == bias_type]
-            similarities = filtered_df['similarity_score'].to_numpy()
-            mse = np.mean(similarities)
+            similarities = np.mean(filtered_df['similarity_score'].to_numpy()) 
 
             # Store result
             similarity_scores[bias_type] = similarities
@@ -181,6 +190,7 @@ class Evaluator():
         # Print results
         print("Average cosine similarities for bias type")
         pprint(similarity_scores)
+        print("\n\n")
 
     ##################################################################
 
@@ -192,3 +202,8 @@ class Evaluator():
         self.run_BERT_eval()
         self.run_cos_eval()
 
+if __name__ == "__main__":
+    evaluator = Evaluator(path_to_RAG_outputs="./bias_results.csv",
+                          bias_types=["filter", "ranking", "prompt"])
+    
+    evaluator.run()
