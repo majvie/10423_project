@@ -89,7 +89,7 @@ class Evaluator():
         # PART A: MEAN SQUARED ERROR
         mean_squared_errors = dict()
         # Loop over each type of RAG output (unbiased, filter, ranking, prompt)
-        for bias_type in self.bias_types:
+        for bias_type in self.bias_types + ['none']:
             
             # Compute MSE for type
             filtered_df = self.RAG_outputs_df[self.RAG_outputs_df['bias_type'] == bias_type]
@@ -118,7 +118,6 @@ class Evaluator():
             # Compute Cohen's Kappa
             cohen_kappa = cohen_kappa_score(unbiased_ratings, biased_ratings, weights="quadratic")
             cohen_kappas[bias_type] = cohen_kappa
-            breakpoint()
 
         # Print results
         print("BERT sentiment evaluation agreement to unbiased (Cohen's Kappa):")
