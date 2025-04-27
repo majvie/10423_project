@@ -22,7 +22,6 @@ class AI_Summarizer:
                  max_rating=5.0,
                  similarity_model_name = "sentence-transformers/all-MiniLM-L6-v2", 
                  topk=10,
-
                  model_openai="gpt-4o-mini"):
         self.model_openai = model_openai
         self.similarity_model = SentenceTransformer(similarity_model_name)

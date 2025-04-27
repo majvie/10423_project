@@ -16,7 +16,8 @@ from pprint import pprint
 import pandas as pd
 from tqdm import tqdm
 from transformers import pipeline
-import matplotlib.pyplot as plt
+from bert_score import score as bert_score
+import matplotlib.pyplot as plt´
 
 ###############################################################################
 
@@ -184,28 +185,32 @@ class Evaluator():
     # Method 2: Cosine Similarity #
     ###############################
 
-    def cos_sim(self,
-                text1 : str, 
-                text2 : str) -> float:
+    def bert_similarity(self,
+                       text1 : str, 
+                       text2 : str) -> float:
         """
-        Computes the cosine similarity between two strings.
-        First, embed strings. Then compute cosine similarity
+        Computes the similarity between two strings using BERTScore.
+        
+        BERTScore computes the similarity between two texts by comparing the
+        contextual embeddings of each token, providing a more nuanced 
+        semantic comparison than cosine similarity.
 
         Args:
             text1 (str): First string (typically unbiased RAG output)
             text2 (str): Second string (typically biased RAG output)
 
         Returns:
-            float: Cosine similarity between the strings
+            float: BERTScore F1 score between the strings
         """
+        # BERTScore expects lists of references and candidates
+        P, R, F1 = bert_score([text2], [text1], lang="en", rescale_with_baseline=True)
+        
+        # Return F1 score (most balanced measure)
+        return F1.item()
 
-        text1_embedding = self.similarity_model.encode(text1)
-        text2_embedding = self.similarity_model.encode(text2)
-        return sentence_transformers.util.cos_sim(text1_embedding, text2_embedding).item()
-
-    def run_cos_eval(self):
+    def run_bert_score_eval(self):
         """
-        Main function for running cosine similarity evaluations
+        Main function for running BERTScore evaluations
         """
 
         # Loop over products
@@ -219,19 +224,16 @@ class Evaluator():
                 row = asin_df[asin_df['bias_type'] == bias]
                 if pd.isna(row['similarity_score'].iloc[0]):
 
-                    # Compute cosine similarity
+                    # Compute BERTScore similarity
                     unbiased_text = asin_df[asin_df['bias_type'] == 'none']['text'].iloc[0]
                     biased_text = row['text'].iloc[0]
-                    similarity_score = self.cos_sim(unbiased_text, biased_text)
+                    similarity_score = self.bert_similarity(unbiased_text, biased_text)
 
-                    # Update DF 'sentiment_score'
+                    # Update DF 'similarity_score'
                     idx = row.index[0]
                     self.RAG_outputs_df.at[idx, 'similarity_score'] = similarity_score
 
-                    # Update CSV
-                    # self.RAG_outputs_df.to_csv(self.path_to_RAG_outputs, index=False)
-
-        # Compute average cosine similarities for each type of bias
+        # Compute average BERTScore similarities for each type of bias
         similarity_scores = dict()
         # Loop over each type of RAG output (unbiased, filter, ranking, prompt)
         for bias_type in self.bias_types:
@@ -244,7 +246,7 @@ class Evaluator():
             similarity_scores[bias_type] = similarities
         
         # Print results
-        print("Average cosine similarities for bias type")
+        print("Average BERTScore similarities for bias type")
         pprint(similarity_scores)
         print("\n\n")
 
@@ -256,7 +258,7 @@ class Evaluator():
         """
 
         self.run_BERT_eval()
-        self.run_cos_eval()
+        self.run_bert_score_eval()
 
 if __name__ == "__main__":
     evaluator = Evaluator(path_to_RAG_outputs="./bias_results.csv",
