@@ -17,6 +17,7 @@ import pandas as pd
 from tqdm import tqdm
 from transformers import pipeline
 from bert_score import score as bert_score
+import matplotlib.pyplot as plt´
 
 ###############################################################################
 
@@ -29,7 +30,8 @@ class Evaluator():
                  path_to_RAG_outputs : str,
                  bias_types : list[str],
                  similarity_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-                 bert_model_name : str = "nlptown/bert-base-multilingual-uncased-sentiment"):
+                 bert_model_name : str = "nlptown/bert-base-multilingual-uncased-sentiment",
+                 bert_rating_bar_chart_directory : str = ""):
         """
         Initialize evaluator.
 
@@ -38,12 +40,15 @@ class Evaluator():
         similarity_model_name (str): Name of similarity model to be used for RAG output
                                      cosine similarity. 
                                      Defaults to sentence-transformers/all-MiniLM-L6-v2
+        bert_rating_bar_chart_directory (str): Folder to store histogram of BERT ratings per bias type.
+                                               If undefined, no plot is generated.
         """
 
         self.path_to_RAG_outputs = path_to_RAG_outputs
         self.RAG_outputs_df = pd.read_csv(path_to_RAG_outputs)
         self.similarity_model = SentenceTransformer(similarity_model_name)
         self.bias_types = bias_types
+        self.bert_rating_bar_chart_directory = bert_rating_bar_chart_directory
 
         # Bert model
         self.bert_pipe = pipeline("text-classification", model=bert_model_name)
@@ -90,7 +95,7 @@ class Evaluator():
         # PART A: MEAN SQUARED ERROR
         mean_squared_errors = dict()
         # Loop over each type of RAG output (unbiased, filter, ranking, prompt)
-        for bias_type in self.bias_types:
+        for bias_type in self.bias_types + ['none']:
             
             # Compute MSE for type
             filtered_df = self.RAG_outputs_df[self.RAG_outputs_df['bias_type'] == bias_type]
@@ -115,7 +120,7 @@ class Evaluator():
             # Fetch predicted ratings
             unbiased_ratings = self.RAG_outputs_df[self.RAG_outputs_df["bias_type"] == "none"]["sentiment_score"].astype(int).to_numpy()
             biased_ratings = self.RAG_outputs_df[self.RAG_outputs_df["bias_type"] == bias_type]["sentiment_score"].astype(int).to_numpy()
-
+            
             # Compute Cohen's Kappa
             cohen_kappa = cohen_kappa_score(unbiased_ratings, biased_ratings, weights="quadratic")
             cohen_kappas[bias_type] = cohen_kappa
@@ -124,6 +129,57 @@ class Evaluator():
         print("BERT sentiment evaluation agreement to unbiased (Cohen's Kappa):")
         pprint(cohen_kappas)
         print("\n\n")
+
+        # PART C: Histogram of Predicted Ratings
+        if self.bert_rating_bar_chart_directory != "":
+            # Loop over each star rating
+            by_rating = []
+            by_bias = {bias: [0,0,0,0,0] for bias in self.bias_types + ['none']}
+            for rating in [1, 2, 3, 4, 5]:
+                # Get count with rating for each bias type
+                count_for_bias = {bias: None for bias in self.bias_types + ['none']}
+                for bias in count_for_bias:
+                    count = self.RAG_outputs_df[
+                                            (self.RAG_outputs_df["bias_type"] == bias) & (self.RAG_outputs_df["sentiment_score"] == rating)
+                                            ].shape[0]
+                    count_for_bias[bias] = count
+                    by_bias[bias][rating-1] = count
+                    
+                by_rating.append(count_for_bias)
+
+            # Plot results on bar chart
+            # BY RATING
+            fig, axes = plt.subplots(1, 5, figsize=(20, 4))  # 1 row, 4 columns
+            for rating, (ax, count_for_bias) in enumerate(zip(axes, by_rating)):
+                bias_types = list(count_for_bias.keys())
+                counts = list(count_for_bias.values())
+                ax.bar(bias_types, counts)
+                ax.set_xlabel('Bias Type')
+                ax.set_ylabel('Count')
+                ax.set_title(f'{int(rating) + 1}-star predictions given bias type')
+
+            # Adjust layout to prevent overlap
+            plt.tight_layout()
+            # Save to file
+            plt.savefig(f"{self.bert_rating_bar_chart_directory}/by_star.png", dpi=300, bbox_inches='tight')
+            plt.close()
+
+            # BY BIAS
+            fig, axes = plt.subplots(1, 4, figsize=(20, 4))  # 1 row, 4 columns
+            for ax, (bias, star_counts) in zip(axes, by_bias.items()):
+                stars = [1,2,3,4,5]
+                ax.bar(stars, star_counts)
+                ax.set_xlabel('Star Prediction')
+                ax.set_ylabel('Count')
+                ax.set_title(f'{bias.upper()} Pipeline Predicted Star Frequency')
+
+            # Adjust layout to prevent overlap
+            plt.tight_layout()
+            # Save to file
+            plt.savefig(f"{self.bert_rating_bar_chart_directory}/by_bias.png", dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f"BERT Bar Charts successfully saved to {self.bert_rating_bar_chart_directory}\n\n")
+
 
     ###############################
     # Method 2: Cosine Similarity #
@@ -206,6 +262,7 @@ class Evaluator():
 
 if __name__ == "__main__":
     evaluator = Evaluator(path_to_RAG_outputs="./bias_results.csv",
-                          bias_types=["filter", "ranking", "prompt"])
+                          bias_types=["filter", "ranking", "prompt"],
+                          bert_rating_bar_chart_directory = "results/")
     
     evaluator.run()
