@@ -31,7 +31,7 @@ Using real-world reviews lets us measure bias on naturally noisy data instead of
 
 ## ⚙️ Methodology
 
-![RAG Pipeline Architecture with Bias Injection Points](graphics/RAG_pipeline.png)
+![RAG Pipeline Architecture with Bias Injection Points](graphics/RAG_Pipeline.png)
 
 Our experimental RAG pipeline uses a standard retrieval-augmented generation approach, but with specific points where bias can be injected. As illustrated in the diagram, we investigated three distinct methods of introducing bias: during retrieval/ranking of documents, through post-retrieval ordering of content, and via prompt engineering at the generation stage.
 
