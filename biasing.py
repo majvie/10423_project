@@ -1,7 +1,6 @@
 import os
 import openai
 import pandas as pd
-import numpy as np
 from pprint import pprint
 from dotenv import load_dotenv
 
@@ -141,7 +140,7 @@ class AI_Summarizer:
             "prompt": prompt,}
         return answer_obj
 
-query = "image quality"
+query = "quality"
 bias_types = {
     "filter": [],
     "none": [],
