@@ -58,13 +58,25 @@ Our experimental RAG pipeline uses a standard retrieval-augmented generation app
 
 ---
 
-## 📊 Conclusions
+## Detection of Biased Pipelines
+
 
 ![AI Fidelity Graph showing detection performance for different bias techniques](graphics/ai_fidelities.png)
 
 We test the ability of an LLM to judge how biased a product summary is on a Likert scale, given an increasing number of product reviews.
 
 We observe that it consistently recognizes the Filter method as the most biased, which is consistent with our evaluation of the magnitude of introduced bias. 
+
+The confusion matrix of our experiments is seen below:
+
+![Confusion Matrix for Bias Detection ](graphics/combined_confusion_matrix_n30.png)
+
+
+Using this threshold as a separation, we can now evaluate our detection method. The upper figure shows the confusion matrix associated with our detection metric. We observe a precision 0.61, a recall of 0.66, when we choose our threshold to be 0.85. These scores are obtained after the evaluation of 20 products, where we run the detection five times for each, for a total of 100 experiments, once for the filter method and once for the unbiased example. We chose to provide 30 reviews to provide to the LLM, given that we see no decrease in the detection metric after that. 
+
+## 📊 Conclusions
+
+We note that while the quality of the detection is passable, further work needs to be performed to obtain levels of performance necessary to conclude active biasing in real-life scenarios. 
 
 
 ---
