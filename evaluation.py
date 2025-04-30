@@ -8,8 +8,6 @@ This file defines objects to run evaluation of the RAG pipeline's bias.
 
 # Imports
 
-import sentence_transformers
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics import cohen_kappa_score
 import numpy as np
 from pprint import pprint
@@ -29,7 +27,6 @@ class Evaluator():
     def __init__(self,
                  path_to_RAG_outputs : str,
                  bias_types : list[str],
-                 similarity_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
                  bert_model_name : str = "nlptown/bert-base-multilingual-uncased-sentiment",
                  bert_rating_bar_chart_directory : str = ""):
         """
@@ -37,16 +34,12 @@ class Evaluator():
 
         path_to_RAG_outputs (str): File location of CSV storing unbiased and biased RAG outputs for each product.
         bias_types (list[str]): Each type of bias being evaluated (i.e. ["filter", "ranking", "prompt"])
-        similarity_model_name (str): Name of similarity model to be used for RAG output
-                                     cosine similarity. 
-                                     Defaults to sentence-transformers/all-MiniLM-L6-v2
         bert_rating_bar_chart_directory (str): Folder to store histogram of BERT ratings per bias type.
                                                If undefined, no plot is generated.
         """
 
         self.path_to_RAG_outputs = path_to_RAG_outputs
         self.RAG_outputs_df = pd.read_csv(path_to_RAG_outputs)
-        self.similarity_model = SentenceTransformer(similarity_model_name)
         self.bias_types = bias_types
         self.bert_rating_bar_chart_directory = bert_rating_bar_chart_directory
 
@@ -181,9 +174,9 @@ class Evaluator():
             print(f"BERT Bar Charts successfully saved to {self.bert_rating_bar_chart_directory}\n\n")
 
 
-    ###############################
-    # Method 2: Cosine Similarity #
-    ###############################
+    #############################
+    # Method 2: BERT Similarity #
+    #############################
 
     def bert_similarity(self,
                        text1 : str, 
