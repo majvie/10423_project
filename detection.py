@@ -23,20 +23,18 @@ def get_response(prompt, system_prompt=None):
     content = response.choices[0].message.content
     return content
 
-number_of_tries = 2
-
-
 if __name__ == "__main__":
+    number_of_tries = 2
+
     load_dotenv()
 
     TITLE = "title.y"
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     
-    # load bias_results from CSV
     df = pd.read_csv("bias_results.csv")
+    df = df[df['training'] == 0]
     df_reviews = pd.read_csv("electronics_reviews_with_meta.csv")
 
-    # get unique product header
     product_headers = df['parent_asin'].unique()
     max_products = 12
 
