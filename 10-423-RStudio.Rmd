@@ -1,0 +1,224 @@
+---
+title: "10-423 Graphs"
+author: "Samuel Yarger"
+date: "2025-04-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+o4_results = read.csv("o4-incontext.csv")
+o4_results_bias = o4_results[o4_results$bias == 1,]
+o4_results_unbias = o4_results[o4_results$bias == 0,]
+```
+
+```{r}
+# png(filename = "bias_main.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+#first line plot
+plot(o4_results_bias$examples, o4_results_bias$none, type = "l", 
+     main = "o4 Precieved Bias vs In-Context Learning Examples", 
+     xlab = "In-Context Learning Examples", 
+     ylab = "Times o4 Precieved Biased",
+     col = "darkblue",
+     lwd = 2,
+     ylim = c(0, max(o4_results_bias$none, o4_results_bias$filter, o4_results_bias$ranking, o4_results_bias$prompt))) # Set y-axis limits to fit all lines
+
+#additional lines
+lines(o4_results_bias$examples, o4_results_bias$filter, col = "darkred", lwd = 2)
+lines(o4_results_bias$examples, o4_results_bias$ranking, col = "darkgreen", lwd = 2)
+lines(o4_results_bias$examples, o4_results_bias$prompt, col = "darkorange", lwd = 2)
+# dev.off()
+
+# png(filename = "bias_legend.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+#plot.new()
+#legend
+legend("bottomright",
+       legend = c("No Bias", "Filter Bias", "Ranking Bias", "Prompt Bias"),
+       col = c("darkblue", "darkred", "darkgreen", "darkorange"),
+       lty = 1,
+       lwd = 2)
+# dev.off()
+```
+
+```{r}
+# png(filename = "unbias_main.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+#first line plot
+plot(o4_results_unbias$examples, o4_results_unbias$none, type = "l", 
+     main = "o4 Precieved Unbiased vs In-Context Learning Examples", 
+     xlab = "In-Context Learning Examples", 
+     ylab = "Times o4 Precieved Unbiased",
+     col = "darkblue",
+     lwd = 2,
+     ylim = c(0, max(o4_results_unbias$none, o4_results_unbias$filter, o4_results_unbias$ranking, o4_results_unbias$prompt))) # Set y-axis limits to fit all lines
+
+#additional lines
+lines(o4_results_unbias$examples, o4_results_unbias$filter, col = "darkred", lwd = 2)
+lines(o4_results_unbias$examples, o4_results_unbias$ranking, col = "darkgreen", lwd = 2)
+lines(o4_results_unbias$examples, o4_results_unbias$prompt, col = "darkorange", lwd = 2)
+# dev.off()
+
+# png(filename = "unbias_legend.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+#plot.new()
+#legend
+legend("bottomright",
+       legend = c("No Bias", "Filter Bias", "Ranking Bias", "Prompt Bias"),
+       col = c("darkblue", "darkred", "darkgreen", "darkorange"),
+       lty = 1,
+       lwd = 2)
+# dev.off()
+```
+```{r}
+library(ggplot2)
+electronics_reviews = read.csv(here::here("electronics_reviews_with_meta.csv"))
+```
+
+```{r}
+hist(electronics_reviews$rating)
+hist(electronics_reviews$average_rating)
+
+# png(filename = "avg_rating_dist.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+#prices
+max_rating <- max(electronics_reviews$average_rating, na.rm = TRUE)
+min_rating <- min(electronics_reviews$average_rating, na.rm = TRUE)
+ggplot(electronics_reviews, aes(x = average_rating)) +
+  geom_histogram(breaks = seq(min_rating, max_rating, 
+                             by = max_rating/50),
+                 fill = "steelblue", color = "black", alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Distribution of Average Ratings",
+       x = "Rating",
+       y = "Count") +
+  scale_x_continuous(
+    # Specify exact breaks
+    breaks = seq(from = 0, to = max_rating, by = 0.5)
+  )
+# dev.off()
+
+
+# png(filename = "price_dist.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+max_price <- max(electronics_reviews$price, na.rm = TRUE)
+#prices
+ggplot(electronics_reviews, aes(x = price)) +
+  geom_histogram(breaks = seq(0, max_price, 
+                             by = max_price/50),
+                 fill = "steelblue", color = "black", alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Distribution of Electronics Prices",
+       x = "Price",
+       y = "Count") +
+  scale_x_continuous(
+    # Specify exact breaks
+    breaks = seq(from = 0, to = 1000, by = 50)
+  )
+# dev.off()
+
+# png(filename = "category_dist.png",
+#     width = 1600, height = 1200,
+#     bg = "transparent",
+#     res = 300)
+#category
+category_data <- data.frame(
+  Category = colnames(t(table(electronics_reviews$main_category))),
+  Count = as.vector(t(table(electronics_reviews$main_category)))
+)
+
+ggplot(category_data, aes(x = Category, y = Count, fill = Category)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Electronics Reviews by Category",
+       x = "", y = "Count") +
+  guides(fill = FALSE)
+# dev.off()
+```
+
+
+```{r}
+library(ggplot2)
+
+#convert to long format
+plot_data <- tidyr::pivot_longer(
+  o4_results_bias, 
+  cols = c(none, filter, ranking, prompt),
+  names_to = "bias_type", 
+  values_to = "count"
+)
+
+
+ggplot(plot_data, aes(x = examples, y = count, color = bias_type)) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(
+    values = c("none" = "darkblue", "filter" = "darkred", 
+               "ranking" = "darkgreen", "prompt" = "darkorange"),
+    labels = c("No Bias", "Filter Bias", "Ranking Bias", "Prompt Bias")
+  ) +
+  labs(
+    title = "o4 Perceived Bias vs In-Context Learning Examples",
+    x = "In-Context Learning Examples",
+    y = "Times o4 Perceived Biased",
+    color = "Bias Type"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5)
+  )
+
+
+ggsave("bias_main.png", width = 8, height = 6, dpi = 300, bg = "transparent")
+
+
+
+#convert to long format
+plot_data <- tidyr::pivot_longer(
+  o4_results_unbias, 
+  cols = c(none, filter, ranking, prompt),
+  names_to = "bias_type", 
+  values_to = "count"
+)
+
+
+ggplot(plot_data, aes(x = examples, y = count, color = bias_type)) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(
+    values = c("none" = "darkblue", "filter" = "darkred", 
+               "ranking" = "darkgreen", "prompt" = "darkorange"),
+    labels = c("No Bias", "Filter Bias", "Ranking Bias", "Prompt Bias")
+  ) +
+  labs(
+    title = "o4 Perceived Unbias vs In-Context Learning Examples",
+    x = "In-Context Learning Examples",
+    y = "Times o4 Perceived Unbiased",
+    color = "Bias Type"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5)
+  )
+
+
+ggsave("unbias_main.png", width = 8, height = 6, dpi = 300, bg = "transparent")
+```
+
