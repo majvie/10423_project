@@ -15,7 +15,7 @@ import pandas as pd
 from tqdm import tqdm
 from transformers import pipeline
 from bert_score import score as bert_score
-import matplotlib.pyplot as plt´
+import matplotlib.pyplot as plt
 
 ###############################################################################
 
@@ -146,10 +146,13 @@ class Evaluator():
             for rating, (ax, count_for_bias) in enumerate(zip(axes, by_rating)):
                 bias_types = list(count_for_bias.keys())
                 counts = list(count_for_bias.values())
-                ax.bar(bias_types, counts)
-                ax.set_xlabel('Bias Type')
-                ax.set_ylabel('Count')
-                ax.set_title(f'{int(rating) + 1}-star predictions given bias type')
+                ax.bar(bias_types, counts, color="orange")
+                ax.set_xlabel('Bias Type', fontsize=16)
+                ax.set_ylabel('Count', fontsize=16)
+                ax.set_title(f'{int(rating) + 1}-Star', fontsize=25)
+                ax.tick_params(axis='x', labelsize=14)
+                ax.tick_params(axis='y', labelsize=14)
+                ax.set_ylim(0, 70)
 
             # Adjust layout to prevent overlap
             plt.tight_layout()
@@ -162,9 +165,12 @@ class Evaluator():
             for ax, (bias, star_counts) in zip(axes, by_bias.items()):
                 stars = [1,2,3,4,5]
                 ax.bar(stars, star_counts)
-                ax.set_xlabel('Star Prediction')
-                ax.set_ylabel('Count')
-                ax.set_title(f'{bias.upper()} Pipeline Predicted Star Frequency')
+                ax.set_xlabel('Stars', fontsize=16)
+                ax.set_ylabel('Count', fontsize=16)
+                ax.set_title(f'{bias.upper()} Star Predictions', fontsize=25)
+                ax.tick_params(axis='x', labelsize=14)
+                ax.tick_params(axis='y', labelsize=14)
+                ax.set_ylim(0, 70)
 
             # Adjust layout to prevent overlap
             plt.tight_layout()
