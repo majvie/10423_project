@@ -10,7 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-o4_results = read.csv("o4-incontext.csv")
+o4_results = read.csv("4o-incontext.csv")
+o4_results$none = o4_results$none*(100/95)
+o4_results$ranking = o4_results$ranking*(100/95)
+o4_results$filter = o4_results$filter*(100/95)
+o4_results$prompt = o4_results$prompt*(100/95)
 o4_results_bias = o4_results[o4_results$bias == 1,]
 o4_results_unbias = o4_results[o4_results$bias == 0,]
 ```
@@ -155,6 +159,9 @@ ggplot(category_data, aes(x = Category, y = Count, fill = Category)) +
 
 
 ```{r}
+min_value = max(as.integer(min(min(o4_results$none), min(o4_results$filter), min(o4_results$ranking), min(o4_results$prompt))), 0)
+max_value = as.integer(max(max(o4_results$none), max(o4_results$filter), max(o4_results$ranking), max(o4_results$prompt)))*1.05
+
 library(ggplot2)
 
 #convert to long format
@@ -171,12 +178,18 @@ ggplot(plot_data, aes(x = examples, y = count, color = bias_type)) +
   scale_color_manual(
     values = c("none" = "darkblue", "filter" = "darkred", 
                "ranking" = "darkgreen", "prompt" = "darkorange"),
-    labels = c("No Bias", "Filter Bias", "Ranking Bias", "Prompt Bias")
+    breaks = c("none", "filter", "ranking", "prompt"),
+    labels = c("none" = "No Bias", "filter" = "Filter Bias", 
+               "ranking" = "Ranking Bias", "prompt" = "Prompt Bias")
+  ) +
+  scale_y_continuous(
+    limits = c(min_value, max_value),
+    breaks = seq(min_value, max_value, by = 10)
   ) +
   labs(
-    title = "o4 Perceived Bias vs In-Context Learning Examples",
+    title = "Perceived Bias Percent vs In-Context Learning Examples",
     x = "In-Context Learning Examples",
-    y = "Times o4 Perceived Biased",
+    y = "Percent Perceived Biased",
     color = "Bias Type"
   ) +
   theme_minimal() +
@@ -192,9 +205,9 @@ ggsave("bias_main.png", width = 8, height = 6, dpi = 300, bg = "transparent")
 
 #convert to long format
 plot_data <- tidyr::pivot_longer(
-  o4_results_unbias, 
+  o4_results_unbias,
   cols = c(none, filter, ranking, prompt),
-  names_to = "bias_type", 
+  names_to = "bias_type",
   values_to = "count"
 )
 
@@ -204,12 +217,18 @@ ggplot(plot_data, aes(x = examples, y = count, color = bias_type)) +
   scale_color_manual(
     values = c("none" = "darkblue", "filter" = "darkred", 
                "ranking" = "darkgreen", "prompt" = "darkorange"),
-    labels = c("No Bias", "Filter Bias", "Ranking Bias", "Prompt Bias")
+    breaks = c("none", "filter", "ranking", "prompt"),
+    labels = c("none" = "No Bias", "filter" = "Filter Bias", 
+               "ranking" = "Ranking Bias", "prompt" = "Prompt Bias")
+  ) +
+  scale_y_continuous(
+    limits = c(min_value, max_value),
+    breaks = seq(min_value, max_value, by = 10)
   ) +
   labs(
-    title = "o4 Perceived Unbias vs In-Context Learning Examples",
+    title = "Perceived Unbias Percent vs In-Context Learning Examples",
     x = "In-Context Learning Examples",
-    y = "Times o4 Perceived Unbiased",
+    y = "Percent Perceived Unbiased",
     color = "Bias Type"
   ) +
   theme_minimal() +
